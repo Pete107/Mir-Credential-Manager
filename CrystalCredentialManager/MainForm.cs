@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Windows.Forms;
 using MirCredentialManager.Common;
 
@@ -7,64 +6,29 @@ namespace CrystalCredentialManager
 {
     public partial class MainForm : Form
     {
-        private readonly ICredentialsManager<CredentialEntry> _credentialsManager;
-        private CredentialEntry _selectedEntry;
+        private readonly ICredentialsManager _credentialsManager;
+        private ICredentialEntry _selectedEntry;
         public MainForm()
         {
             InitializeComponent();
-            debugBox.Checked = false;
-            serverNameBox.Text = string.Empty;
-            clientDirBox.Text = string.Empty;
-            userNameBox.Text = string.Empty;
-            passwordBox.Text = string.Empty;
+
             startButton.Enabled = false;
             removeButton.Enabled = false;
-            _credentialsManager = new CredentialsManager<CredentialEntry>();
+            _credentialsManager = new CredentialsManager();
+            _credentialsManager.MappedTypes.Add(typeof(CrystalCredentials).Name, typeof(CrystalCredentials));
+            _credentialsManager.MappedTypes.Add(typeof(ZirconCredentials).Name, typeof(ZirconCredentials));
             _credentialsManager.Load();
             RefreshUi();
         }
 
         private void credentialListBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-            debugBox.Checked = false;
-            serverNameBox.Text = string.Empty;
-            clientDirBox.Text = string.Empty;
-            userNameBox.Text = string.Empty;
-            passwordBox.Text = string.Empty;
             startButton.Enabled = false;
             removeButton.Enabled = false;
-            if (!(credentialListBox.SelectedItem is CredentialEntry entry)) return;
+            if (!(credentialListBox.SelectedItem is BaseEntry entry)) return;
             _selectedEntry = entry;
-            serverNameBox.Text = entry.ServerName;
-            clientDirBox.Text = entry.FilePath;
-            userNameBox.Text = entry.UserName;
-            passwordBox.Text = entry.Password;
-            debugBox.Checked = entry.IsDebug;
             startButton.Enabled = true;
             removeButton.Enabled = true;
-        }
-
-        private void saveButton_Click(object sender, EventArgs e)
-        {
-            if (_selectedEntry == null)
-            {
-                if (!Directory.Exists(clientDirBox.Text))
-                    return;
-                var entry = new CredentialEntry
-                {
-                    ServerName = serverNameBox.Text,
-                    FilePath = clientDirBox.Text,
-                    UserName = userNameBox.Text,
-                    Password = passwordBox.Text,
-                    IsDebug = debugBox.Checked
-                };
-                _credentialsManager.AddEntry(entry);
-            }
-            else
-                _credentialsManager.UpdateEntry(_selectedEntry);
-            
-            _credentialsManager.Save();
-            RefreshUi();
         }
 
         private void startButton_Click(object sender, EventArgs e)
@@ -86,20 +50,40 @@ namespace CrystalCredentialManager
             credentialListBox.Items.Clear();
             foreach (var credentialsManagerCredential in _credentialsManager.Credentials)
             {
-                credentialListBox.Items.Add(credentialsManagerCredential);
+                switch (credentialsManagerCredential)
+                {
+                    case ZirconCredentials zircon:
+                        credentialListBox.Items.Add(zircon);
+                        break;
+                    case CrystalCredentials crystal:
+                        credentialListBox.Items.Add(crystal);
+                        break;
+                }
             }
         }
-
-        private void debugBox_CheckedChanged(object sender, EventArgs e)
-        {
-
-        }
-
         private void addNewButton_Click(object sender, EventArgs e)
         {
-            _selectedEntry = null;
-            credentialListBox.SelectedItem = null;
-            credentialListBox.SelectedIndex = -1;
+            var form = new AddEntryForm();
+            form.EntryAdded += FormOnEntryAdded;
+            var result = form.ShowDialog();
+            if (result != DialogResult.OK)
+            {
+                _credentialsManager.Save();
+            }
+
+            if (form != null && !form.IsDisposed && !form.Disposing)
+            {
+                form.EntryAdded -= FormOnEntryAdded;
+                form.Close();
+                form.Dispose();
+            }
+            _credentialsManager.Save();
+            RefreshUi();
+        }
+
+        private void FormOnEntryAdded(object sender, BaseEntry e)
+        {
+            _credentialsManager.Credentials.Add(e);
         }
     }
 }

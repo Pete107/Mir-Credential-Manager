@@ -14,7 +14,7 @@ namespace MirCredentialManager.Common
     {
         private static string EncryptionKey = string.Empty;
 
-        private static void GetEncryptionKey()
+        public static void GetEncryptionKey()
         {
             if (!File.Exists(Path.Combine(BasePath(), "credentialkey.txt")))
             {
@@ -28,59 +28,125 @@ namespace MirCredentialManager.Common
         private static string BasePath() => Path.Combine(AppDomain.CurrentDomain.BaseDirectory);
         public static string GetSaveFilePath() => Path.Combine(BasePath(), "credentials.mcred");
         public static void CreateSaveFile() => File.AppendAllText(GetSaveFilePath(), "");
-        public const string ConfigFileName = "Mir2Config.ini";
-        public const string TestConfigFileName = "Mir2Test.ini";
-        public const string ClientExeName = "Client.exe";
-        public const string AccountIdKey = "AccountID=";
-        public const string PasswordKey = "Password=";
+        public const string CrystalConfigFileName = "Mir2Config.ini";
+        public const string CrystalTestConfigFileName = "Mir2Test.ini";
+        public const string CrystalClientFileName = "Client.exe";
+        public const string CrystalAccountIdKey = "AccountID=";
+        public const string CrystalPasswordKey = "Password=";
+
+        public const string ZirconConfigFileName = "Zircon.ini";
+        public const string ZirconTestConfigFileName = "Client.ini";
+        public const string ZirconFileName = "Zircon.exe";
+        public const string ZirconAccountIdKey = "RememberedEMail=";
+        public const string ZirconPasswordKey = "RememberedPassword=";
         public static string GetAccountId(string inputLine) =>
-            inputLine.Replace(AccountIdKey, "");
+            inputLine.Replace(CrystalAccountIdKey, "");
         public static string GetPassword(string inputLine) =>
-            inputLine.Replace(PasswordKey, "");
-        public static void PutAccountId(string filePath, string accountId)
+            inputLine.Replace(CrystalPasswordKey, "");
+        public static void PutAccountId(string filePath, string accountId, bool isDebug = false)
         {
-            if (!File.Exists(filePath))
-                throw new FileNotFoundException($"File cannot be found {filePath}");
-            var lines = File.ReadAllLines(filePath);
-            var result = new string[lines.Length];
-            var currentLine = 0;
-            foreach (var line in lines)
+            
+            //Assume crystal files
+            if (File.Exists(Path.Combine(filePath, CrystalClientFileName)))
             {
+                var config =
+                    isDebug ? CrystalTestConfigFileName : CrystalConfigFileName;
+                if (!File.Exists(Path.Combine(filePath, config)))
+                    throw new FileNotFoundException($"File cannot be found {Path.Combine(filePath, config)}");
+                var lines = File.ReadAllLines(Path.Combine(filePath, config));
+                var result = new string[lines.Length];
+                var currentLine = 0;
+                foreach (var line in lines)
+                {
                 
-                if (!line.StartsWith(AccountIdKey))
-                {
-                    result[currentLine] = line;
+                    if (!line.StartsWith(CrystalAccountIdKey))
+                    {
+                        result[currentLine] = line;
+                        currentLine++;
+                        continue;
+                    }
+                    result[currentLine] = $"{CrystalAccountIdKey}{accountId}";
                     currentLine++;
-                    continue;
                 }
-                result[currentLine] = $"{AccountIdKey}{accountId}";
-                currentLine++;
+                File.WriteAllLines(Path.Combine(filePath, config), result);
             }
-            File.WriteAllLines(filePath, result);
-        }
-        public static void PutAccountPassword(string filePath, string password)
-        {
-            if (!File.Exists(filePath))
-                throw new FileNotFoundException($"File cannot be found {filePath}");
-            var lines = File.ReadAllLines(filePath);
-            var result = new string[lines.Length];
-            var currentLine = 0;
-            foreach (var line in lines)
+            else
             {
-                if (!line.StartsWith(PasswordKey))
+                var config = isDebug ? ZirconTestConfigFileName : ZirconConfigFileName;
+                if (!File.Exists(Path.Combine(filePath, config)))
+                    throw new FileNotFoundException($"File cannot be found {filePath} {config}");
+                var lines = File.ReadAllLines(Path.Combine(filePath, config));
+                var result = new string[lines.Length];
+                var currentLine = 0;
+                foreach (var line in lines)
                 {
-                    result[currentLine] = line;
+                
+                    if (!line.StartsWith(ZirconAccountIdKey))
+                    {
+                        result[currentLine] = line;
+                        currentLine++;
+                        continue;
+                    }
+                    result[currentLine] = $"{ZirconAccountIdKey}{accountId}";
                     currentLine++;
-                    continue;
+                }
+                File.WriteAllLines(Path.Combine(filePath, config), result);
+            }
+        }
+        public static void PutAccountPassword(string filePath, string password, bool isDebug = false)
+        {
+            if (File.Exists(Path.Combine(filePath, CrystalClientFileName)))
+            {
+                var config =
+                    isDebug ? CrystalTestConfigFileName : CrystalConfigFileName;
+                if (!File.Exists(Path.Combine(filePath, config)))
+                    throw new FileNotFoundException($"File cannot be found {Path.Combine(filePath, config)}");
+                if (!File.Exists(Path.Combine(filePath, config)))
+                    throw new FileNotFoundException($"File cannot be found {Path.Combine(filePath, config)}");
+                var lines = File.ReadAllLines(Path.Combine(filePath, config));
+                var result = new string[lines.Length];
+                var currentLine = 0;
+                foreach (var line in lines)
+                {
+                    if (!line.StartsWith(CrystalPasswordKey))
+                    {
+                        result[currentLine] = line;
+                        currentLine++;
+                        continue;
+                    }
+
+                    result[currentLine] = $"{CrystalPasswordKey}{password}";
+                    currentLine++;
                 }
 
-                result[currentLine] = $"{PasswordKey}{password}";
-                currentLine++;
+                File.WriteAllLines(Path.Combine(filePath, config), result);
             }
-            File.WriteAllLines(filePath, result);
+            else if (File.Exists(Path.Combine(filePath, ZirconFileName)))
+            {
+                var config = isDebug ? ZirconTestConfigFileName : ZirconConfigFileName;
+                if (!File.Exists(Path.Combine(filePath, config)))
+                    throw new FileNotFoundException($"File cannot be found {Path.Combine(filePath, config)}");
+                var lines = File.ReadAllLines(Path.Combine(filePath, config));
+                var result = new string[lines.Length];
+                var currentLine = 0;
+                foreach (var line in lines)
+                {
+                    if (!line.StartsWith(ZirconPasswordKey))
+                    {
+                        result[currentLine] = line;
+                        currentLine++;
+                        continue;
+                    }
+
+                    result[currentLine] = $"{ZirconPasswordKey}{password}";
+                    currentLine++;
+                }
+
+                File.WriteAllLines(Path.Combine(filePath, config), result);
+            }
         }
 
-        internal static string Encrypt(string input)
+        public static string Encrypt(string input)
         {
             if (string.IsNullOrEmpty(EncryptionKey))
                 GetEncryptionKey();
@@ -105,7 +171,7 @@ namespace MirCredentialManager.Common
             return input;
         }
 
-        internal static string Decrypt(string input)
+        public static string Decrypt(string input)
         {
             if (string.IsNullOrEmpty(EncryptionKey))
                 GetEncryptionKey();
